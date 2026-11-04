@@ -1,0 +1,10 @@
+node_modules/
+dist/
+public/pdfjs/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.env*
+validacion/*.pdf
+validacion/salida/
+tests/private/

@@ -1,0 +1,70 @@
+%PDF-1.7
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /Lang (en) >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>
+endobj
+5 0 obj
+<< /Length 161 >>
+stream
+BT /F1 12 Tf 72 730 Td (Rating: General audiences) Tj ET
+BT /F1 12 Tf 72 690 Td (Summary) Tj ET
+BT /F1 12 Tf 72 660 Td (A synthetic summary of this work.) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 374 >>
+stream
+BT /F1 18 Tf 72 740 Td (Chapter 1: A title that continues) Tj ET
+BT /F1 18 Tf 140 718 Td (on the following line) Tj ET
+BT /F1 12 Tf 60 675 Td (Chapter Notes) Tj ET
+BT /F1 12 Tf 85 645 Td (A brief author note before the story.) Tj ET
+BT /F1 9 Tf 60 615 Td (See the end of the chapter for more notes) Tj ET
+BT /F1 12 Tf 60 580 Td (The fiction begins outside the notes.) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 95 >>
+stream
+BT /F1 18 Tf 72 740 Td (Chapter 2: Home) Tj ET
+BT /F1 12 Tf 72 700 Td (Another chapter.) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Title (Front matter and wrapped title) /Author (Test author) >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000069 00000 n 
+0000000139 00000 n 
+0000000209 00000 n 
+0000000287 00000 n 
+0000000498 00000 n 
+0000000634 00000 n 
+0000001058 00000 n 
+0000001194 00000 n 
+0000001338 00000 n 
+0000001475 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R /Info 11 0 R >>
+startxref
+1559
+%%EOF
