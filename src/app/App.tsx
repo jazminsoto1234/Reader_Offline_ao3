@@ -9,8 +9,6 @@ import type { ReadingProgress, SavedFile } from '../features/reader/saved-readin
 
 export default function App() {
   const [session, setSession] = useState<ReadingSession>();
-  const [originalPdfUrl, setOriginalPdfUrl] = useState<string>();
-  useEffect(() => () => { if (originalPdfUrl) URL.revokeObjectURL(originalPdfUrl); }, [originalPdfUrl]);
   const [sessionKey, setSessionKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -69,7 +67,6 @@ export default function App() {
       }
       if (controller.current === current && !current.signal.aborted) {
         setSavedId(id); setResume(restored && id ? loadProgress(id) : undefined);
-        setOriginalPdfUrl(isPdf ? URL.createObjectURL(file.slice(0, file.size, 'application/pdf')) : undefined);
         setSession(reading); setSessionKey(key => key + 1);
       }
     } catch (failure) {
@@ -92,7 +89,7 @@ export default function App() {
         {busy && <div className="notice" role="status"><span>{progress}</span><button onClick={() => { controller.current?.abort(); controller.current = null; setBusy(false); }}>Cancel import</button></div>}
         {error && <div className="error" role="alert"><strong>We could not open this file.</strong><p>{error}</p>{session && <p>You can continue your previous read or open another file.</p>}<button onClick={() => input.current?.click()}>Choose another file</button></div>}
       </div>
-      {session ? <Reader key={sessionKey} session={session} originalPdfUrl={originalPdfUrl} initialProgress={resume} onProgress={savedId ? savePosition : undefined} preferences={preferences} updatePreferences={updatePreferences} onClose={() => { controller.current?.abort(); controller.current = null; setBusy(false); setSession(undefined); setOriginalPdfUrl(undefined); setSavedId(undefined); setError(''); void forgetSavedFile().catch(() => setStorageNotice('Your saved reading could not be removed from this browser.')); requestAnimationFrame(() => heading.current?.focus()); }} /> :
+      {session ? <Reader key={sessionKey} session={session} initialProgress={resume} onProgress={savedId ? savePosition : undefined} preferences={preferences} updatePreferences={updatePreferences} onClose={() => { controller.current?.abort(); controller.current = null; setBusy(false); setSession(undefined); setSavedId(undefined); setError(''); void forgetSavedFile().catch(() => setStorageNotice('Your saved reading could not be removed from this browser.')); requestAnimationFrame(() => heading.current?.focus()); }} /> :
         <section className="welcome">
           <p className="eyebrow">YOUR FILE, YOUR READING</p>
           <h1 tabIndex={-1} ref={heading}>One story.<br />All the space to read it.</h1>

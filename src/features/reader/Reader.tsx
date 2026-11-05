@@ -7,7 +7,7 @@ import FileWarnings from './FileWarnings';
 import type { Preferences } from './preferences';
 import type { ReadingProgress } from './saved-reading';
 
-export default function Reader({ session, originalPdfUrl, onClose, preferences, updatePreferences, initialProgress, onProgress }: { session: ReadingSession; originalPdfUrl?: string; onClose: () => void; preferences: Preferences; updatePreferences: (value: Preferences) => void; initialProgress?: ReadingProgress; onProgress?: (progress: ReadingProgress) => boolean }) {
+export default function Reader({ session, onClose, preferences, updatePreferences, initialProgress, onProgress }: { session: ReadingSession; onClose: () => void; preferences: Preferences; updatePreferences: (value: Preferences) => void; initialProgress?: ReadingProgress; onProgress?: (progress: ReadingProgress) => boolean }) {
   const sequence = session.sections.filter(section => section.linear);
   const chapters = sequence.filter(section => section.role !== 'frontmatter');
   const frontmatter = sequence.find(section => section.role === 'frontmatter');
@@ -102,7 +102,6 @@ export default function Reader({ session, originalPdfUrl, onClose, preferences, 
       {frontmatter && !isFrontmatter && <button onClick={() => goTo({ path: frontmatter.path, fragment: '' })}>Work details</button>}
       <button onClick={() => { bottom.current?.focus(); bottom.current?.scrollIntoView(); }}>Go to bottom ↓</button>
       <button aria-expanded={settingsOpen} aria-controls="ajustes-lectura" onClick={() => setSettingsOpen(!settingsOpen)}>Reading settings</button>
-      {originalPdfUrl && <a href={originalPdfUrl} target="_blank" rel="noopener noreferrer">Open original PDF</a>}
       <button onClick={onClose}>Close work</button>
     </div>
     {settingsOpen && <ReadingPreferences value={preferences} onChange={updatePreferences} />}
