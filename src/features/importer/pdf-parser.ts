@@ -83,7 +83,8 @@ export async function importPdf(file: File, signal: AbortSignal, onProgress: (me
         if (href) links.push({ href, rect: annotation.rect });
       }
       const imageOps = new Set([pdfjs.OPS.paintImageXObject, pdfjs.OPS.paintInlineImageXObject, pdfjs.OPS.paintImageMaskXObject]);
-      pages.push({ number, chars: pageChars, blocks: reconstructPdfPage(items, fonts, links, number), links, images: operators.fnArray.some(op => imageOps.has(op)) });
+      const pageCenter = (page.view[0] + page.view[2]) / 2;
+      pages.push({ number, chars: pageChars, blocks: reconstructPdfPage(items, fonts, links, number, pageCenter), links, images: operators.fnArray.some(op => imageOps.has(op)) });
       page.cleanup();
       await new Promise(resolve => setTimeout(resolve, 0));
     }

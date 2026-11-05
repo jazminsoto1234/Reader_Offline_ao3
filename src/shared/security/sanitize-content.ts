@@ -22,14 +22,22 @@ export function sanitizeContent(source: string, path: string, available: Set<str
     if (firstHeading.id) marker.id = firstHeading.id;
     firstHeading.replaceWith(marker);
   }
-  // El exportador AO3 también usa p + blockquote dentro de .meta, sin clase notes.
-  for (const label of fragment.querySelectorAll('.meta > p')) {
+  const isNotesReference = (node: Element | null) => Boolean(node && (
+    node.matches('.endnote-link') ||
+    (/^see the end of the chapter for (?:more )?notes[.!]?$/i.test(node.textContent?.trim().replace(/\s+/g, ' ') || '') && node.querySelector('a[href]'))
+  ));
+  // Algunas exportaciones conservan la cita y el enlace, pero pierden .meta.
+  for (const label of fragment.querySelectorAll('p, h2, h3, h4')) {
     if (!/^(?:chapter\s+notes|notes|notas(?:\s+del\s+capítulo)?)\s*:?$/i.test(label.textContent?.trim() || '')) continue;
     const next = label.nextElementSibling;
-    if (!next?.matches('blockquote.userstuff, .endnote-link')) continue;
+    if (!next) continue;
+    const noteQuote = next.matches('blockquote') && (next.matches('.userstuff') || isNotesReference(next.nextElementSibling));
+    if (!noteQuote && !isNotesReference(next)) continue;
+    if (label.closest('.notes, .author-notes')) continue;
     const group = document.createElement('div'); group.className = 'notes';
     label.replaceWith(group); group.append(label, next);
-    if (group.nextElementSibling?.matches('.endnote-link')) group.append(group.nextElementSibling);
+    const reference = group.nextElementSibling;
+    if (noteQuote && reference && isNotesReference(reference)) group.append(reference);
   }
   const noteCandidates = Array.from(fragment.querySelectorAll('[class], [id], [role], [epub\\:type], aside'))
     .filter(node => /(^|\s)(notes?|endnotes?|footnotes?)(\s|$)/i.test(`${node.getAttribute('class') || ''} ${node.getAttribute('epub:type') || ''}`) || /^endnotes\d*$/i.test(node.id) || node.getAttribute('role') === 'doc-endnotes');

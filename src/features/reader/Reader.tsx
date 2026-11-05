@@ -12,7 +12,8 @@ export default function Reader({ session, onClose, preferences, updatePreference
   const chapters = sequence.filter(section => section.role !== 'frontmatter');
   const frontmatter = sequence.find(section => section.role === 'frontmatter');
   const restored = useRef(initialProgress && session.sections.some(item => item.path === initialProgress.path) ? initialProgress : undefined);
-  const [destination, setDestination] = useState<Destination>(restored.current || { path: sequence[0].path, fragment: '' });
+  const firstSection = session.format === 'pdf' && chapters.length === 1 ? chapters[0] : sequence[0];
+  const [destination, setDestination] = useState<Destination>(restored.current || { path: firstSection.path, fragment: '' });
   const currentDestination = useRef(destination);
   const section = session.sections.find(item => item.path === destination.path)!;
   const position = sequence.findIndex(item => item.path === section.path);

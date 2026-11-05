@@ -5,7 +5,7 @@ export interface ReadingProgress extends Destination {
   anchor?: number;
   offset?: number;
 }
-export const readingCacheVersion = 3;
+export const readingCacheVersion = 9;
 export interface SavedFile {
   id: string; file: Blob; name: string; lastModified: number;
   // Bump this version when the parser/sanitizer changes to invalidate old cached text.
