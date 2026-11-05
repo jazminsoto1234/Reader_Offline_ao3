@@ -52,6 +52,25 @@ it('mantiene diálogos y oraciones en su párrafo según el espaciado del PDF', 
     '—Debemos irnos —respondió él. Se levantó sin mirar atrás.',
   ]);
 });
+it('separa turnos y narración cuando predominan los espacios entre párrafos', () => {
+  const session = buildPdfSession([page(1, [
+    item('“Look at me.”', 700),
+    item('“We were friends, weren’t we?”', 678),
+    item('“We were children.”', 656),
+    item('He lowered his head and rested his chin', 634),
+    item('on her shoulder. “You smell nice,” he said.', 621),
+    item('“What?!”', 599),
+  ])], [], {});
+  const div = document.createElement('div');
+  div.innerHTML = session.sections[0].html;
+  expect(Array.from(div.querySelectorAll('p'), paragraph => paragraph.textContent)).toEqual([
+    '“Look at me.”',
+    '“We were friends, weren’t we?”',
+    '“We were children.”',
+    'He lowered his head and rested his chin on her shoulder. “You smell nice,” he said.',
+    '“What?!”',
+  ]);
+});
 it('conserva las comillas y los espacios reales en fragmentos de una misma línea', () => {
   const [block] = page(1, [item('“', 700, 72), item('Hola', 700, 81, 'italic'), item('”', 700, 108), item(' ', 700, 114), item('dijo.', 700, 120)]).blocks;
   expect(block.runs.map(run => run.text).join('')).toBe('“Hola” dijo.');

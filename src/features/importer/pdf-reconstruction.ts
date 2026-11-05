@@ -13,7 +13,6 @@ export const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => (
 export function safePdfUrl(value: string | undefined): string | undefined {
   try { const url = new URL(value || ''); return ['http:', 'https:', 'mailto:'].includes(url.protocol) ? url.href : undefined; } catch { return undefined; }
 }
-const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] || 0;
 const blockText = (block: PdfBlock) => block.runs.map(run => run.text).join('').trim();
 const isEndNotesReference = (text: string) => /^(?:see (?:the )?end of (?:the |this )?chapter for (?:more )?notes|(?:ver|consulta|véanse) (?:las )?notas al final del capítulo)[.!\s]*$/i.test(text);
 export function reconstructPdfPage(items: PdfItem[], fonts: Record<string, { italic?: boolean; bold?: boolean }>, links: PdfLink[], number: number): PdfBlock[] {
@@ -25,7 +24,10 @@ export function reconstructPdfPage(items: PdfItem[], fonts: Record<string, { ita
     line.items.push(item); line.size = Math.max(line.size, size); line.x = Math.min(line.x, x);
   }
   const textLines = lines.filter(line => line.items.some(item => item.str.trim()));
-  const spacing = median(textLines.slice(1).map((line, i) => textLines[i].y - line.y).filter(gap => gap > 7 && gap < 30)) || 15;
+  const gaps = textLines.slice(1).map((line, i) => textLines[i].y - line.y).filter(gap => gap > 7 && gap < 30).sort((a, b) => a - b);
+  // Dialogue-heavy pages can have more paragraph gaps than wrapped lines.
+  const spacing = gaps[Math.floor((gaps.length - 1) * .1)] || 15;
+  const paragraphGap = spacing * 1.38;
   const blocks: PdfBlock[] = [];
   let previousLine: typeof lines[number] | undefined;
   for (const line of textLines) {
@@ -52,7 +54,7 @@ export function reconstructPdfPage(items: PdfItem[], fonts: Record<string, { ita
       previousLine = line;
       continue;
     }
-    const paragraph = !previous || !previousLine || kind !== 'p' || previous.kind !== 'p' || separator || previous.separator || isEndNotesReference(label) || isEndNotesReference(blockText(previous)) || previousLine.y - line.y > spacing * 1.38 || Math.abs(previousLine.size - line.size) > 1.2 || Math.abs(line.x - previousLine.x) > line.size * 1.5;
+    const paragraph = !previous || !previousLine || kind !== 'p' || previous.kind !== 'p' || separator || previous.separator || isEndNotesReference(label) || isEndNotesReference(blockText(previous)) || previousLine.y - line.y > paragraphGap || Math.abs(previousLine.size - line.size) > 1.2 || Math.abs(line.x - previousLine.x) > line.size * 1.5;
     if (paragraph) blocks.push({ kind, runs, page: number, size: line.size, x: line.x, separator });
     else previous.runs.push({ text: ' ' }, ...runs);
     previousLine = line;
