@@ -7,7 +7,7 @@ import FileWarnings from './FileWarnings';
 import type { Preferences } from './preferences';
 import type { ReadingProgress } from './saved-reading';
 
-export default function Reader({ session, onClose, preferences, updatePreferences, initialProgress, onProgress }: { session: ReadingSession; onClose: () => void; preferences: Preferences; updatePreferences: (value: Preferences) => void; initialProgress?: ReadingProgress; onProgress?: (progress: ReadingProgress) => void }) {
+export default function Reader({ session, originalPdfUrl, onClose, preferences, updatePreferences, initialProgress, onProgress }: { session: ReadingSession; originalPdfUrl?: string; onClose: () => void; preferences: Preferences; updatePreferences: (value: Preferences) => void; initialProgress?: ReadingProgress; onProgress?: (progress: ReadingProgress) => boolean }) {
   const sequence = session.sections.filter(section => section.linear);
   const chapters = sequence.filter(section => section.role !== 'frontmatter');
   const frontmatter = sequence.find(section => section.role === 'frontmatter');
@@ -22,8 +22,9 @@ export default function Reader({ session, onClose, preferences, updatePreference
   const bottom = useRef<HTMLDivElement>(null);
   const article = useRef<HTMLElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const navigating = useRef(false);
   const captureProgress = () => {
-    if (!onProgress) return;
+    if (!onProgress || navigating.current) return;
     const blocks = Array.from(article.current?.querySelectorAll('p,h1,h2,h3,h4,h5,h6,li,pre,hr') || []);
     const anchor = blocks.findIndex(node => node.getBoundingClientRect().bottom > 0);
     onProgress({ ...currentDestination.current, scrollY: window.scrollY,
@@ -40,7 +41,9 @@ export default function Reader({ session, onClose, preferences, updatePreference
       restored.current = undefined;
       heading.current?.focus({ preventScroll: true });
       const block = resume.anchor === undefined ? undefined : article.current?.querySelectorAll('p,h1,h2,h3,h4,h5,h6,li,pre,hr')[resume.anchor];
-      window.scrollTo(0, block && resume.offset !== undefined ? window.scrollY + block.getBoundingClientRect().top - resume.offset : resume.scrollY);
+      if (resume.fragment && resume.anchor === undefined && target) {
+        target.setAttribute('tabindex', '-1'); target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'start' });
+      } else window.scrollTo(0, block && resume.offset !== undefined ? window.scrollY + block.getBoundingClientRect().top - resume.offset : resume.scrollY);
       capture.current();
       return;
     }
@@ -65,9 +68,21 @@ export default function Reader({ session, onClose, preferences, updatePreference
       document.removeEventListener('visibilitychange', hidden);
     };
   }, [onProgress]);
+  const goTo = (next: Destination) => {
+    if (navigating.current) return;
+    // A new document lets browser translators apply their automatic language setting.
+    // Save before leaving; pagehide must not overwrite the new chapter with the old one.
+    if (next.path !== destination.path && onProgress?.({ ...next, scrollY: 0 })) {
+      navigating.current = true;
+      window.location.reload();
+      return;
+    }
+    // With storage unavailable, keep reading in memory rather than losing the file.
+    setDestination(next);
+  };
   const navigate = (offset: number) => {
     const next = sequence[position + offset];
-    if (next) setDestination({ path: next.path, fragment: '' });
+    if (next) goTo({ path: next.path, fragment: '' });
   };
   const nav = (location: string) => <nav aria-label={`${location} navigation`} className={styles.navigation}>
     <button disabled={position <= 0} onClick={() => navigate(-1)}>← Previous</button>
@@ -79,14 +94,15 @@ export default function Reader({ session, onClose, preferences, updatePreference
   return <div className={styles.reader} data-size={preferences.size} data-spacing={preferences.spacing} data-width={preferences.width}>
     <div className={styles.toolbar} translate="no">
       <label className={styles.index}>Chapter index
-        <select value={selected < 0 ? '' : selected} onChange={event => { const entry = session.toc[Number(event.target.value)]; if (entry) setDestination({ path: entry.path, fragment: entry.fragment }); }}>
+        <select value={selected < 0 ? '' : selected} onChange={event => { const entry = session.toc[Number(event.target.value)]; if (entry) goTo({ path: entry.path, fragment: entry.fragment }); }}>
           <option value="" disabled>Select a chapter or section</option>
           {session.toc.map((entry, index) => <option key={index} value={index}>{'　'.repeat(Math.min(entry.depth, 4))}{entry.label}</option>)}
         </select>
       </label>
-      {frontmatter && !isFrontmatter && <button onClick={() => setDestination({ path: frontmatter.path, fragment: '' })}>Work details</button>}
+      {frontmatter && !isFrontmatter && <button onClick={() => goTo({ path: frontmatter.path, fragment: '' })}>Work details</button>}
       <button onClick={() => { bottom.current?.focus(); bottom.current?.scrollIntoView(); }}>Go to bottom ↓</button>
       <button aria-expanded={settingsOpen} aria-controls="ajustes-lectura" onClick={() => setSettingsOpen(!settingsOpen)}>Reading settings</button>
+      {originalPdfUrl && <a href={originalPdfUrl} target="_blank" rel="noopener noreferrer">Open original PDF</a>}
       <button onClick={onClose}>Close work</button>
     </div>
     {settingsOpen && <ReadingPreferences value={preferences} onChange={updatePreferences} />}
@@ -99,7 +115,7 @@ export default function Reader({ session, onClose, preferences, updatePreference
       if (anchor) {
         event.preventDefault();
         const path = anchor.getAttribute('data-path')!;
-        if (session.sections.some(item => item.path === path)) setDestination({ path, fragment: anchor.getAttribute('data-fragment') || '' });
+        if (session.sections.some(item => item.path === path)) goTo({ path, fragment: anchor.getAttribute('data-fragment') || '' });
       }
     }} dangerouslySetInnerHTML={{ __html: section.html }} />
     <div ref={bottom} tabIndex={-1} className={styles.bottom}>

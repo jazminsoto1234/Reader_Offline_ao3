@@ -4,6 +4,8 @@ Lector EPUB y PDF en React + TypeScript + Vite. Abre archivos del dispositivo si
 
 La interfaz está en inglés, incluidos títulos, botones, ajustes y avisos. El contenido y los títulos originales de las obras conservan su idioma; no se traducen automáticamente.
 
+Para facilitar la traducción del navegador, cambiar de capítulo recarga el documento y recupera el archivo y el destino guardados. Los saltos dentro de un capítulo no recargan. El texto procesado de nuevos archivos también se guarda localmente para evitar extraer todo el EPUB o PDF en cada cambio; cerrar la obra elimina esa copia junto con el archivo. Si el almacenamiento está bloqueado, se mantiene la navegación en memoria. La traducción depende del navegador y de su opción «Traducir siempre» para el idioma de la obra; la aplicación no puede activarla. La traducción real de Chrome/Android requiere comprobación manual y no está cubierta por Playwright.
+
 ## Ejecutar en Windows
 
 Requiere Node.js 22.13 o posterior. Desde esta carpeta:

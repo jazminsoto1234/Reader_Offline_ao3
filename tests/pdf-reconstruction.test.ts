@@ -39,6 +39,23 @@ it('reconstruye párrafos y mantiene énfasis sin insertar HTML del PDF', () => 
   expect(session.sections[0].html).toContain('La primera linea continua aqui.');
   expect(session.sections[0].html).toContain('<em>&lt;script&gt;hostil&lt;/script&gt;</em>');
 });
+it('mantiene diálogos y oraciones en su párrafo según el espaciado del PDF', () => {
+  const blocks = page(1, [
+    item('Ella ya lo sabía.', 700),
+    item('“Te esperaba”, dijo.', 685),
+    item('Entonces cerró la puerta.', 670),
+    item('—Debemos irnos —respondió él.', 640),
+    item('Se levantó sin mirar atrás.', 625),
+  ]).blocks;
+  expect(blocks.map(block => block.runs.map(run => run.text).join(''))).toEqual([
+    'Ella ya lo sabía. “Te esperaba”, dijo. Entonces cerró la puerta.',
+    '—Debemos irnos —respondió él. Se levantó sin mirar atrás.',
+  ]);
+});
+it('conserva las comillas y los espacios reales en fragmentos de una misma línea', () => {
+  const [block] = page(1, [item('“', 700, 72), item('Hola', 700, 81, 'italic'), item('”', 700, 108), item(' ', 700, 114), item('dijo.', 700, 120)]).blocks;
+  expect(block.runs.map(run => run.text).join('')).toBe('“Hola” dijo.');
+});
 it('no crea un prefacio vacío; separa capítulos y notas por sangría', () => {
   const session = buildPdfSession([page(1, [item('Chapter 1: Home', 750), item('Chapter Notes', 720, 100), item('An author note.', 690, 110), item('The story begins here.', 640), item('Chapter 2: Sea', 580), item('The second story.', 550)])], [], {});
   expect(session.sections.map(section => section.title)).toEqual(['Chapter 1: Home', 'Chapter 2: Sea']);

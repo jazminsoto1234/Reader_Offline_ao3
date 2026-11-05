@@ -1,4 +1,36 @@
 import { test, expect } from '@playwright/test';
+
+test('cambiar de capítulo renueva el documento para el traductor y conserva el destino', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('input[type=file]').setInputFiles('tests/fixtures/demo-epub3.epub');
+  await expect(page.locator('article')).toContainText('La casa esperaba junto al mar');
+  const markDocument = () => page.evaluate(() => { (window as any).previousChapterDocument = true; });
+  const expectNewDocument = async () => {
+    expect(await page.evaluate(() => (window as any).previousChapterDocument)).toBeUndefined();
+  };
+  await markDocument();
+  // Los destinos dentro del mismo capítulo conservan el documento y el foco.
+  await page.getByLabel('Chapter index').selectOption('1');
+  await expect(page.locator('article h3').filter({ hasText: 'Una segunda escena' })).toBeFocused();
+  expect(await page.evaluate(() => (window as any).previousChapterDocument)).toBe(true);
+  await page.getByRole('navigation', { name: 'Bottom navigation' }).getByRole('button', { name: 'Next' }).click();
+  await expect(page.locator('article')).toContainText('Sobre la mesa había una carta');
+  await expectNewDocument();
+  // La recarga recupera el texto ya procesado, sin volver a extraer el EPUB.
+  expect(page.workers()).toHaveLength(0);
+  await markDocument();
+  await page.getByRole('navigation', { name: 'Top navigation' }).getByRole('button', { name: 'Previous' }).click();
+  await expect(page.locator('article')).toContainText('La casa esperaba junto al mar');
+  await expectNewDocument();
+  await markDocument();
+  await page.getByLabel('Chapter index').selectOption({ label: 'Capítulo 2: Las cartas' });
+  await expect(page.locator('article')).toContainText('Sobre la mesa había una carta');
+  await expectNewDocument();
+  await markDocument();
+  await page.getByLabel('Chapter index').selectOption('1');
+  await expect(page.locator('article h3').filter({ hasText: 'Una segunda escena' })).toBeFocused();
+  await expectNewDocument();
+});
 test('importación, navegación, notas, reemplazo y privacidad', async ({ page }) => {
   const external: string[] = [];
   page.on('request', request => { if (!request.url().startsWith('http://127.0.0.1:4181/')) external.push(request.url()); });

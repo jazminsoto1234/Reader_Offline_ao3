@@ -4,11 +4,13 @@ import { omitEditorialSections } from '../domain/reading-session';
 import Reader from '../features/reader/Reader';
 import { usePreferences } from '../features/reader/preferences';
 import { PDF_LIMITS } from '../features/importer/pdf-limits';
-import { forgetSavedFile, loadProgress, loadSavedFile, storeFile, storeProgress } from '../features/reader/saved-reading';
+import { forgetSavedFile, loadProgress, loadSavedFile, readingCacheVersion, storeFile, storeProgress } from '../features/reader/saved-reading';
 import type { ReadingProgress, SavedFile } from '../features/reader/saved-reading';
 
 export default function App() {
   const [session, setSession] = useState<ReadingSession>();
+  const [originalPdfUrl, setOriginalPdfUrl] = useState<string>();
+  useEffect(() => () => { if (originalPdfUrl) URL.revokeObjectURL(originalPdfUrl); }, [originalPdfUrl]);
   const [sessionKey, setSessionKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -34,9 +36,9 @@ export default function App() {
     return () => { controller.current?.abort(); };
   }, []);
   const savePosition = useCallback((position: ReadingProgress) => {
-    if (!savedId) return;
-    try { storeProgress(savedId, position); }
-    catch { setStorageNotice('Your browser could not save your reading position.'); }
+    if (!savedId) return false;
+    try { storeProgress(savedId, position); return true; }
+    catch { setStorageNotice('Your browser could not save your reading position.'); return false; }
   }, [savedId]);
   async function open(file?: File, restored?: SavedFile) {
     if (!file) return;
@@ -50,20 +52,24 @@ export default function App() {
       if (file.size > (isPdf ? PDF_LIMITS.file : 20 * 1024 * 1024)) throw new Error(isPdf ? 'The PDF exceeds the 100 MiB limit.' : 'The EPUB exceeds the 20 MiB limit.');
       current.signal.throwIfAborted();
       const report = (message: string) => { if (controller.current === current && !current.signal.aborted) setProgress(message); };
-      const next = isPdf
+      const next = restored?.reading?.version === readingCacheVersion ? restored.reading.session : isPdf
         ? await import('../features/importer/pdf-parser').then(module => module.importPdf(file, current.signal, report))
         : await import('../features/importer/import-controller').then(module => module.importEpub(file, current.signal));
       const reading = omitEditorialSections(next);
       current.signal.throwIfAborted();
       let id = restored?.id;
       try {
-        if (!restored) { report('Saving your file in this browser…'); id = await storeFile(file, current.signal); }
+        if (!restored || restored.reading?.version !== readingCacheVersion) {
+          report('Saving your file in this browser…');
+          id = await storeFile(file, current.signal, reading, restored?.id);
+        }
       } catch {
         current.signal.throwIfAborted();
         setStorageNotice('This file could not be saved in your browser. You can read it, but reloading may restore your previous read.');
       }
       if (controller.current === current && !current.signal.aborted) {
         setSavedId(id); setResume(restored && id ? loadProgress(id) : undefined);
+        setOriginalPdfUrl(isPdf ? URL.createObjectURL(file.slice(0, file.size, 'application/pdf')) : undefined);
         setSession(reading); setSessionKey(key => key + 1);
       }
     } catch (failure) {
@@ -86,7 +92,7 @@ export default function App() {
         {busy && <div className="notice" role="status"><span>{progress}</span><button onClick={() => { controller.current?.abort(); controller.current = null; setBusy(false); }}>Cancel import</button></div>}
         {error && <div className="error" role="alert"><strong>We could not open this file.</strong><p>{error}</p>{session && <p>You can continue your previous read or open another file.</p>}<button onClick={() => input.current?.click()}>Choose another file</button></div>}
       </div>
-      {session ? <Reader key={sessionKey} session={session} initialProgress={resume} onProgress={savedId ? savePosition : undefined} preferences={preferences} updatePreferences={updatePreferences} onClose={() => { controller.current?.abort(); controller.current = null; setBusy(false); setSession(undefined); setSavedId(undefined); setError(''); void forgetSavedFile().catch(() => setStorageNotice('Your saved reading could not be removed from this browser.')); requestAnimationFrame(() => heading.current?.focus()); }} /> :
+      {session ? <Reader key={sessionKey} session={session} originalPdfUrl={originalPdfUrl} initialProgress={resume} onProgress={savedId ? savePosition : undefined} preferences={preferences} updatePreferences={updatePreferences} onClose={() => { controller.current?.abort(); controller.current = null; setBusy(false); setSession(undefined); setOriginalPdfUrl(undefined); setSavedId(undefined); setError(''); void forgetSavedFile().catch(() => setStorageNotice('Your saved reading could not be removed from this browser.')); requestAnimationFrame(() => heading.current?.focus()); }} /> :
         <section className="welcome">
           <p className="eyebrow">YOUR FILE, YOUR READING</p>
           <h1 tabIndex={-1} ref={heading}>One story.<br />All the space to read it.</h1>

@@ -31,6 +31,7 @@ for (const width of [1280, 390]) {
     await expect(restoredParagraph).toBeInViewport();
     expect(Math.abs(await restoredParagraph.evaluate(node => node.getBoundingClientRect().top) - before)).toBeLessThan(3);
     await reopened.getByLabel('Chapter index').selectOption({ label: 'Chapter 2: The letter' });
+    await expect(reopened.locator('article')).toContainText('There was a letter');
     await reopened.reload();
     await expect(reopened.locator('article')).toContainText('There was a letter');
     await expect(reopened.getByRole('navigation', { name: 'Top navigation' })).toContainText('2 / 2');
@@ -92,6 +93,7 @@ for (const version of [2, 3]) for (const width of [1280, 390]) {
     await expect(restoredParagraph).toBeInViewport();
     expect(Math.abs(await restoredParagraph.evaluate(node => node.getBoundingClientRect().top) - before)).toBeLessThan(3);
     await reopened.getByLabel('Chapter index').selectOption({ label: 'Capítulo 2: Las cartas' });
+    await expect(reopened.locator('article')).toContainText('Sobre la mesa había una carta');
     await reopened.reload();
     await expect(reopened.getByLabel('Chapter index').locator('option:checked')).toHaveText('Capítulo 2: Las cartas');
     await expect(reopened.locator('article')).toContainText('Sobre la mesa había una carta');
@@ -131,4 +133,8 @@ test('si el navegador bloquea IndexedDB, permite leer y avisa que no se guardar�
   await expect(page.locator('article')).toContainText('A story about returning home');
   await expect(page.getByText('This file could not be saved', { exact: false })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Top navigation' }).getByRole('button', { name: 'Next' })).toBeEnabled();
+  await page.evaluate(() => { (window as any).inMemoryDocument = true; });
+  await page.getByRole('navigation', { name: 'Top navigation' }).getByRole('button', { name: 'Next' }).click();
+  await expect(page.locator('article')).toContainText('The house waited');
+  expect(await page.evaluate(() => (window as any).inMemoryDocument)).toBe(true);
 });

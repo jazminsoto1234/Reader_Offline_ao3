@@ -18,21 +18,23 @@ const blockText = (block: PdfBlock) => block.runs.map(run => run.text).join('').
 const isEndNotesReference = (text: string) => /^(?:see (?:the )?end of (?:the |this )?chapter for (?:more )?notes|(?:ver|consulta|véanse) (?:las )?notas al final del capítulo)[.!\s]*$/i.test(text);
 export function reconstructPdfPage(items: PdfItem[], fonts: Record<string, { italic?: boolean; bold?: boolean }>, links: PdfLink[], number: number): PdfBlock[] {
   const lines: { y: number; x: number; size: number; items: PdfItem[] }[] = [];
-  for (const item of items.filter(item => item.str.trim()).sort((a, b) => b.transform[5] - a.transform[5] || a.transform[4] - b.transform[4])) {
+  for (const item of items.filter(item => item.str.trim() || (item.str && item.width > 0)).sort((a, b) => b.transform[5] - a.transform[5] || a.transform[4] - b.transform[4])) {
     const y = item.transform[5], x = item.transform[4], size = Math.abs(item.height || item.transform[3]);
     let line = lines.at(-1);
     if (!line || Math.abs(line.y - y) >= Math.max(1.5, size * .22)) { line = { y, x, size, items: [] }; lines.push(line); }
     line.items.push(item); line.size = Math.max(line.size, size); line.x = Math.min(line.x, x);
   }
-  const spacing = median(lines.slice(1).map((line, i) => lines[i].y - line.y).filter(gap => gap > 7 && gap < 30)) || 15;
+  const textLines = lines.filter(line => line.items.some(item => item.str.trim()));
+  const spacing = median(textLines.slice(1).map((line, i) => textLines[i].y - line.y).filter(gap => gap > 7 && gap < 30)) || 15;
   const blocks: PdfBlock[] = [];
   let previousLine: typeof lines[number] | undefined;
-  for (const line of lines) {
+  for (const line of textLines) {
     const runs: PdfRun[] = [];
     let end: number | undefined;
     for (const item of line.items.sort((a, b) => a.transform[4] - b.transform[4])) {
       const x = item.transform[4];
-      if (end !== undefined && x - end > line.size * .14 && !runs.at(-1)?.text.endsWith(' ') && !item.str.startsWith(' ')) runs.push({ text: ' ' });
+      const previousText = runs.at(-1)?.text || '';
+      if (end !== undefined && x - end > line.size * .14 && !/[\s“«¿¡]$/.test(previousText) && !/^[\s.,:;!?…»”]/.test(item.str)) runs.push({ text: ' ' });
       const link = links.find(link => { const rect = link.rect; return rect && x + item.width > Math.min(rect[0], rect[2]) + 1 && x < Math.max(rect[0], rect[2]) - 1 && item.transform[5] >= Math.min(rect[1], rect[3]) - 2 && item.transform[5] <= Math.max(rect[1], rect[3]) + 2; });
       runs.push({ text: item.str, ...fonts[item.fontName], href: link?.href });
       end = x + item.width;
@@ -50,8 +52,7 @@ export function reconstructPdfPage(items: PdfItem[], fonts: Record<string, { ita
       previousLine = line;
       continue;
     }
-    const dialogue = /^[“"«—–]/.test(label) && /[.!?…»”"]$/.test(previous ? blockText(previous) : '');
-    const paragraph = !previous || !previousLine || kind !== 'p' || previous.kind !== 'p' || separator || previous.separator || isEndNotesReference(label) || isEndNotesReference(blockText(previous)) || previousLine.y - line.y > spacing * 1.38 || Math.abs(previousLine.size - line.size) > 1.2 || Math.abs(line.x - previousLine.x) > line.size * 1.5 || dialogue;
+    const paragraph = !previous || !previousLine || kind !== 'p' || previous.kind !== 'p' || separator || previous.separator || isEndNotesReference(label) || isEndNotesReference(blockText(previous)) || previousLine.y - line.y > spacing * 1.38 || Math.abs(previousLine.size - line.size) > 1.2 || Math.abs(line.x - previousLine.x) > line.size * 1.5;
     if (paragraph) blocks.push({ kind, runs, page: number, size: line.size, x: line.x, separator });
     else previous.runs.push({ text: ' ' }, ...runs);
     previousLine = line;

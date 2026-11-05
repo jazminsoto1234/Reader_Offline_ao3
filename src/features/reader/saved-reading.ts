@@ -1,11 +1,16 @@
-import type { Destination } from '../../domain/reading-session';
+import type { Destination, ReadingSession } from '../../domain/reading-session';
 
 export interface ReadingProgress extends Destination {
   scrollY: number;
   anchor?: number;
   offset?: number;
 }
-export interface SavedFile { id: string; file: Blob; name: string; lastModified: number }
+export const readingCacheVersion = 2;
+export interface SavedFile {
+  id: string; file: Blob; name: string; lastModified: number;
+  // Bump this version when the parser/sanitizer changes to invalidate old cached text.
+  reading?: { version: number; session: ReadingSession };
+}
 const progressKey = 'lector.reading-progress.v1';
 const legacyProgressKey = 'lector.pdf-progress.v1';
 
@@ -29,8 +34,7 @@ export async function loadSavedFile(): Promise<SavedFile | undefined> {
   } finally { db.close(); }
 }
 
-export async function storeFile(file: File, signal: AbortSignal): Promise<string> {
-  const id = crypto.randomUUID();
+export async function storeFile(file: File, signal: AbortSignal, session?: ReadingSession, id: string = crypto.randomUUID()): Promise<string> {
   const db = await database();
   try {
     signal.throwIfAborted();
@@ -38,7 +42,8 @@ export async function storeFile(file: File, signal: AbortSignal): Promise<string
       const transaction = db.transaction('files', 'readwrite');
       const abort = () => { try { transaction.abort(); } catch { /* Transacción ya finalizada. */ } };
       signal.addEventListener('abort', abort, { once: true });
-      transaction.objectStore('files').put({ id, file, name: file.name, lastModified: file.lastModified } satisfies SavedFile, 'current');
+      transaction.objectStore('files').put({ id, file, name: file.name, lastModified: file.lastModified,
+        reading: session ? { version: readingCacheVersion, session } : undefined } satisfies SavedFile, 'current');
       transaction.oncomplete = () => { signal.removeEventListener('abort', abort); resolve(); };
       transaction.onabort = transaction.onerror = () => { signal.removeEventListener('abort', abort); reject(transaction.error || new Error('Saving cancelled.')); };
     });
